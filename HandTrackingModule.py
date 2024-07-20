@@ -53,11 +53,12 @@ def main():
     counter = FPS()
     while True:
         ret, img = cap.read()
-        img = detector.findHands(img)
-        print(detector.findPosition(img))
-        cv2.putText(img, f"FPS: {str(counter.update())}", (50,50), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 3)
-        cv2.imshow("Image", img)
-        cv2.waitKey(1) # 1 = video, 0 = image
+        if ret:
+            img = detector.findHands(img)
+            print(detector.findPosition(img))
+            cv2.putText(img, f"FPS: {str(counter.update())}", (50,50), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 3)
+            cv2.imshow("Image", img)
+            cv2.waitKey(1) # 1 = video, 0 = image
 
 if __name__ == "__main__": 
     main()
