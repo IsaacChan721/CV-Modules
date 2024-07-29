@@ -33,6 +33,29 @@ class handDetector():
                     cx, cy = int(lm.x*w), int(lm.y*h)
                     lm_pos.append([id, cx, cy])
         return lm_pos        
+    
+    def findFingersUp(self, lm_pos):
+        fingers = [False]*5
+        distThumb = ((lm_pos[4][1]-lm_pos[0][1])**2 + (lm_pos[4][2]-lm_pos[0][2])**2)**0.5
+        
+        #thumb
+        if lm_pos[4][2] < lm_pos[3][2] and distThumb > 125:
+            fingers[0] = True
+        #index
+        if lm_pos[8][2] < lm_pos[7][2]:
+            fingers[1] = True
+        #middle
+        if lm_pos[12][2] < lm_pos[11][2]:
+            fingers[2] = True
+        #ring
+        if lm_pos[16][2] < lm_pos[15][2]:
+            fingers[3] = True
+        #pinky     
+        if lm_pos[20][2] < lm_pos[19][2]:
+            fingers[4] = True
+
+        return fingers
+    
 class FPS():
     def __init__(self):
         self.start = time.time()
@@ -55,7 +78,8 @@ def main():
         ret, img = cap.read()
         if ret:
             img = detector.findHands(img)
-            print(detector.findPosition(img))
+            if detector.findPosition(img):
+                print(detector.findFingersUp(detector.findPosition(img)))
             cv2.putText(img, f"FPS: {str(counter.update())}", (50,50), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 3)
             cv2.imshow("Image", img)
             cv2.waitKey(1) # 1 = video, 0 = image
