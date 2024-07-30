@@ -8,7 +8,8 @@ frameW, frameH = 160, 120 # frame width and height
 camW, camH = 640, 480 # frame height
 screenW, screenH = pag.size() # screen width and height
 smoothening = 5
-curlocX, curlocY, prevlocX, prevlocY = [0]*4
+curlocX, curlocY = 0, 0
+prevlocX, prevlocY = 0, 0
 # pag.FAILSAFE = False
 
 def minLandmark(list):
@@ -31,12 +32,16 @@ def canMoveMouse(fingersUp): # moving index finger
     return False
     
 def moveMouse(x, y):
+    global prevlocX, prevlocY, curlocX, curlocY
     # map values
-    x2 = int(np.interp(x, (frameW, camW-frameW), (0, screenW)))
-    y2 = int(np.interp(y, (frameH, camH-frameH), (0, screenH)))
+    x2 = np.interp(x, (frameW, camW-frameW), (0, screenW))
+    y2 = np.interp(y, (frameH, camH-frameH), (0, screenH))
     curlocX = prevlocX + (x2 - prevlocX) / smoothening
     curlocY = prevlocY + (y2 - prevlocY) / smoothening
-    pag.moveTo(curlocX, curlocY, button='left')
+    print(x2, y2, ".")
+    print(prevlocX, prevlocY, "..")
+    print(curlocX, curlocY, "...")
+    pag.moveTo(curlocX, curlocY)
 
 def canLeftClick(fingersUp): # raising 2 fingers
     if fingersUp[1:3] == [True, True] and not any(fingersUp[3:]) and not fingersUp[0]:
@@ -60,9 +65,10 @@ def canDrag(fingersUp): # raising 4 fingers
     return False
     
 def drag(x, y):
+    global prevlocX, prevlocY, curlocX, curlocY
     # map values
-    x2 = int(np.interp(x, (frameW, screenW-frameW), (0, screenW)))
-    y2 = int(np.interp(y, (frameH, screenH-frameH), (0, screenH)))
+    x2 = np.interp(x, (frameW, screenW-frameW), (0, screenW))
+    y2 = np.interp(y, (frameH, screenH-frameH), (0, screenH))
     curlocX = prevlocX + (x2 - prevlocX) / smoothening
     curlocY = prevlocY + (y2 - prevlocY) / smoothening
     pag.dragTo(curlocX, curlocY, button='left')
@@ -104,7 +110,8 @@ def main():
                     rightClick()
                     img = cv2.putText(img, "Right Click", (50, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
                 # elif canDrag(fingersUp):
-                #     drag(landmarks[20][1], landmarks[20][2])
+                #     global prevlocX, prevlocY, curlocX, curlocY
+                #     drag(landmarks[8][1], landmarks[8][2])
                 #     img = cv2.putText(img, "Drag", (50, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
                 #     prevlocX, prevlocY = curlocX, curlocY
                 # elif canScrollUp(fingersUp):
@@ -115,6 +122,7 @@ def main():
                 #     img = cv2.putText(img, "Scroll Down", (50, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
                 startTime = time.time()
             elif canMoveMouse(fingersUp):
+                global prevlocX, prevlocY, curlocX, curlocY
                 moveMouse(landmarks[8][1], landmarks[8][2])
                 prevlocX, prevlocY = curlocX, curlocY
         
