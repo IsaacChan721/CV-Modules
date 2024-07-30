@@ -4,9 +4,12 @@ import numpy as np
 import HandTrackingModule as htm
 import pyautogui as pag
 
-frameW, frameH = 80, 60 # frame width and height
+frameW, frameH = 160, 120 # frame width and height
 camW, camH = 640, 480 # frame height
 screenW, screenH = pag.size() # screen width and height
+smoothening = 5
+curlocX, curlocY, prevlocX, prevlocY = [0]*4
+# pag.FAILSAFE = False
 
 def minLandmark(list):
     min = 9999
@@ -22,75 +25,63 @@ def maxLandmark(list):
             max = list[i][2]
     return max
 
-def canMoveMouse(landmarks): # moving index finger
-    lmyMin = minLandmark(landmarks)
-    if lmyMin == landmarks[8][2]:
+def canMoveMouse(fingersUp): # moving index finger
+    if fingersUp[1] and not any(fingersUp[2:]):
         return True
-    else:
-        return False
+    return False
     
 def moveMouse(x, y):
     # map values
-    x2 = np.interp(x, (frameW, camW-frameW), (0, screenW))
-    y2 = np.interp(y, (frameH, camH-frameH), (0, screenH))
-    pag.moveTo(x2,y2)
+    x2 = int(np.interp(x, (frameW, camW-frameW), (0, screenW)))
+    y2 = int(np.interp(y, (frameH, camH-frameH), (0, screenH)))
+    curlocX = prevlocX + (x2 - prevlocX) / smoothening
+    curlocY = prevlocY + (y2 - prevlocY) / smoothening
+    pag.moveTo(curlocX, curlocY, button='left')
 
-def canLeftClick(landmarks): # raising 2 fingers
-    lmyMin = minLandmark(landmarks)
-    x1, y1, x2, y2 = landmarks[8][1], landmarks[8][2], landmarks[12][1], landmarks[12][2]
-    dist = ((x2-x1)**2 + (y2-y1)**2)**0.5
-    if dist <= 40 and lmyMin == landmarks[12][2]:
+def canLeftClick(fingersUp): # raising 2 fingers
+    if fingersUp[1:3] == [True, True] and not any(fingersUp[3:]) and not fingersUp[0]:
         return True
-    else:
-        return False 
+    return False
     
 def leftClick():
     pag.click(button='left')
     
-def canRightClick(landmarks): # rasing 3 fingers
-    lmyMin = minLandmark(landmarks)
-    x1, y1, x2, y2 = landmarks[8][1], landmarks[8][2], landmarks[16][1], landmarks[16][2]
-    dist = ((x2-x1)**2 + (y2-y1)**2)**0.5
-    if dist <= 60 and lmyMin == landmarks[12][2]:
+def canRightClick(fingersUp): # rasing 3 fingers
+    if fingersUp[1:4] == [True, True, True] and not fingersUp[0] and not fingersUp[4]:
         return True
-    else:
-        return False 
+    return False
 
 def rightClick():
     pag.click(button='right')
 
-def canDrag(landmarks): # raising pinky finger
-    lmyMin = minLandmark(landmarks)
-    if lmyMin == landmarks[20][2]:
+def canDrag(fingersUp): # raising 4 fingers
+    if all(fingersUp[1:]) and not fingersUp[0]:
         return True
-    else:
-        return False
+    return False
     
 def drag(x, y):
     # map values
-    x2 = np.interp(x, (frameW, screenW-frameW), (0, screenW))
-    y2 = np.interp(y, (frameH, screenH-frameH), (0, screenH))
-    pag.dragTo(x2, y2, button='left')
+    x2 = int(np.interp(x, (frameW, screenW-frameW), (0, screenW)))
+    y2 = int(np.interp(y, (frameH, screenH-frameH), (0, screenH)))
+    curlocX = prevlocX + (x2 - prevlocX) / smoothening
+    curlocY = prevlocY + (y2 - prevlocY) / smoothening
+    pag.dragTo(curlocX, curlocY, button='left')
 
-def canScrollUp(landmarks): # thumbs up
-    lmyMin = minLandmark(landmarks)
-    if lmyMin == landmarks[4][2]:
+def canScrollUp(fingersUp): # thumbs up
+    if fingersUp[0] and not any(fingersUp[1:]):
         return True
-    else:
-        return False
+    return False
     
 def scrollUp():
-    pag.scroll(1)
+    pag.scroll(20)
     
-def canScrollDown(landmarks): # thumbs down
-    lmyMax = maxLandmark(landmarks)
-    if lmyMax == landmarks[4][2]:
+def canScrollDown(fingersUp): # all fingers down
+    if not any(fingersUp):
         return True
-    else:
-        return False
+    return False
     
 def scrollDown():
-    pag.scroll(-1)
+    pag.scroll(-20)
 
 def main():
     cap = cv2.VideoCapture(0)
@@ -100,33 +91,36 @@ def main():
         success, img = cap.read() # image size of (480, 640, 3)
         img = cv2.flip(img, 1)
         img = cv2.rectangle(img, (frameW, frameH), (camW-frameW, camH-frameH), (0, 255, 0), 2)
-        if success:
-            img = detector.findHands(img)
-            landmarks = detector.findPosition(img)
-            if time.time() - startTime >= 1 and landmarks:
-                if canLeftClick(landmarks):
+        img = detector.findHands(img)
+        landmarks = detector.findPosition(img)
+        
+        if landmarks:
+            if time.time() - startTime > 1:
+                fingersUp = detector.findFingersUp(landmarks)
+                if canLeftClick(fingersUp):
                     leftClick()
-                    print("Left Click")
-                elif canRightClick(landmarks):
+                    img = cv2.putText(img, "Left Click", (50, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+                elif canRightClick(fingersUp):
                     rightClick()
-                    print("Right Click")
-                elif canDrag(landmarks):
-                    drag(landmarks[20][1], landmarks[20][2])
-                    print("Drag")
-                elif canScrollUp(landmarks):
-                    scrollUp()
-                    print("Scroll Up")
-                elif canScrollDown(landmarks):
-                    scrollDown()
-                    print("Scroll Down")
+                    img = cv2.putText(img, "Right Click", (50, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+                # elif canDrag(fingersUp):
+                #     drag(landmarks[20][1], landmarks[20][2])
+                #     img = cv2.putText(img, "Drag", (50, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+                #     prevlocX, prevlocY = curlocX, curlocY
+                # elif canScrollUp(fingersUp):
+                #     scrollUp()
+                #     img = cv2.putText(img, "Scroll Up", (50, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+                # elif canScrollDown(fingersUp):
+                #     scrollDown()
+                #     img = cv2.putText(img, "Scroll Down", (50, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
                 startTime = time.time()
-            elif landmarks and canMoveMouse(landmarks):
+            elif canMoveMouse(fingersUp):
                 moveMouse(landmarks[8][1], landmarks[8][2])
+                prevlocX, prevlocY = curlocX, curlocY
+        
         
         cv2.imshow("Image", img)
         cv2.waitKey(1)
     
 if __name__ == '__main__':
     main()
-    
-print(pag.size())

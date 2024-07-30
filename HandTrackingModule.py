@@ -27,7 +27,6 @@ class handDetector():
         lm_pos = []
         if self.results.multi_hand_landmarks:
             for handLms in self.results.multi_hand_landmarks:
-                # for drawing circles on certain landmarks of the hand
                 for id, lm in enumerate(handLms.landmark):
                     h, w, _ = img.shape
                     cx, cy = int(lm.x*w), int(lm.y*h)
@@ -36,22 +35,29 @@ class handDetector():
     
     def findFingersUp(self, lm_pos):
         fingers = [False]*5
-        distThumb = ((lm_pos[4][1]-lm_pos[0][1])**2 + (lm_pos[4][2]-lm_pos[0][2])**2)**0.5
         
+        baseHandy = lm_pos[0][2]
+        
+        distThumby = baseHandy-lm_pos[4][2]
+        distIndexy = baseHandy-lm_pos[8][2]
+        distMiddley = baseHandy-lm_pos[12][2]
+        distRingy = baseHandy-lm_pos[16][2]
+        distPinkyy = baseHandy-lm_pos[20][2]
+      
         #thumb
-        if lm_pos[4][2] < lm_pos[3][2] and distThumb > 125:
+        if lm_pos[4][2] < lm_pos[3][2] and distThumby > 100:
             fingers[0] = True
         #index
-        if lm_pos[8][2] < lm_pos[7][2]:
+        if lm_pos[8][2] < lm_pos[7][2] and distIndexy > 175:
             fingers[1] = True
         #middle
-        if lm_pos[12][2] < lm_pos[11][2]:
+        if lm_pos[12][2] < lm_pos[11][2] and distMiddley > 200:
             fingers[2] = True
         #ring
-        if lm_pos[16][2] < lm_pos[15][2]:
+        if lm_pos[16][2] < lm_pos[15][2] and distRingy > 185:
             fingers[3] = True
         #pinky     
-        if lm_pos[20][2] < lm_pos[19][2]:
+        if lm_pos[20][2] < lm_pos[19][2] and distPinkyy > 150:
             fingers[4] = True
 
         return fingers
